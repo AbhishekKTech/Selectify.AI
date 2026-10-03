@@ -38,6 +38,9 @@ const Interview = ({interviewInfo}: Props) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenRecording, setIsScreenRecording] = useState(false);
+  
+  // Store loaded voices
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   const router = useRouter();
   const speech = useRef<any | null>(null);
@@ -61,6 +64,22 @@ const Interview = ({interviewInfo}: Props) => {
       textToSpeech(completion);
     },
   });
+
+  // PRE-LOAD HIGH QUALITY VOICES
+  useEffect(() => {
+    const fetchVoices = () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          setAvailableVoices(voices);
+        }
+      }
+    };
+    fetchVoices();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = fetchVoices;
+    }
+  }, []);
 
   const parseAudio = async (blob : Blob) => {
     try {
@@ -123,7 +142,27 @@ const Interview = ({interviewInfo}: Props) => {
 
   const textToSpeech = async (input: string) => {
     const utterance = new SpeechSynthesisUtterance(input);
-    utterance.rate = 1.0; 
+    
+    // SMART VOICE SELECTION (Indian Female / Best Available)
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Prioritize Microsoft Neerja (Edge), Google Indian Female (Chrome), or UK Female as fallback
+    let premiumVoice = 
+      voices.find(v => v.name.includes('Microsoft Neerja Online')) ||
+      voices.find(v => v.name.includes('Google') && v.lang.includes('en-IN')) ||
+      voices.find(v => v.name.includes('Google UK English Female')) ||
+      voices.find(v => v.lang === 'en-IN' && v.name.includes('Female')) ||
+      voices.find(v => v.lang === 'en-IN') ||
+      voices.find(v => v.name.includes('Female')) ||
+      voices[0];
+
+    if (premiumVoice) {
+      utterance.voice = premiumVoice;
+    }
+
+    // Tweak properties for human-like pacing
+    utterance.rate = 0.95; // Slightly slower for natural breathing pauses
+    utterance.pitch = 1.05; // Slightly elevated pitch prevents flatness
 
     utterance.onend = () => {
       setInterviewerTalking(false);
@@ -133,7 +172,6 @@ const Interview = ({interviewInfo}: Props) => {
         setQuestionDisplay(questions[questionsAnswered].question);
       } else {
         setInterviewComplete(true);
-        // Automatically compile ONLY after the AI finishes speaking its final farewell message
         onSubmit(); 
       }
     };
@@ -415,10 +453,10 @@ const Interview = ({interviewInfo}: Props) => {
                 </div>
               </div>
 
-              {/* === Video Panels Area === */}
+              {/* === Video Panels Area (Enlarged & Centered) === */}
               <div className='flex flex-col lg:flex-row flex-1 gap-6 items-center justify-center min-h-0 overflow-hidden py-1'>
                 
-                {/* 1. Interviewer Panel */}
+                {/* 1. Interviewer Panel - Dynamic Glow on Talking */}
                 <div className={cn(
                   'flex flex-col bg-white dark:bg-slate-900 rounded-3xl w-full max-w-[400px] shrink aspect-square shadow-sm overflow-hidden relative transition-all duration-500',
                   interviewerTalking ? 'ring-4 ring-indigo-500/50 border-indigo-500 shadow-[0_0_30px_-5px_rgba(99,102,241,0.4)]' : 'border border-slate-200 dark:border-slate-800'
@@ -480,7 +518,7 @@ const Interview = ({interviewInfo}: Props) => {
                   </div>
                 </div>
                 
-                {/* 2. Candidate Panel */}
+                {/* 2. Candidate Panel - Dynamic Glow on Recording */}
                 <div className={cn(
                   'flex flex-col bg-white dark:bg-slate-900 rounded-3xl w-full max-w-[400px] shrink aspect-square shadow-sm overflow-hidden relative transition-all duration-500',
                   isRecording ? 'ring-4 ring-emerald-500/50 border-emerald-500 shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)]' : 'border border-slate-200 dark:border-slate-800'
