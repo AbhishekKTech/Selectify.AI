@@ -26,11 +26,10 @@ export async function POST(req: Request, res: Response) {
     } = result.data;
 
     const { userId } = auth();
-    const userId_my = "my-user-id";
 
-    const user = await clerkClient.users.getUser(userId_my);
-    if (!userId)
+    if (!userId) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const automated_Assess = await prisma.automated_Assess.create({
       data: {
@@ -41,9 +40,10 @@ export async function POST(req: Request, res: Response) {
         jobRequirements,
         level,
         questions,
-        userId: user.id,
+        userId: userId, // Use the real authenticated ID, not the hardcoded string
       },
     });
+    
     return Response.json({ automated_Assess }, { status: 201 });
   } catch (error) {
     console.error(error);

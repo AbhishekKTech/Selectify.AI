@@ -6,11 +6,9 @@ import AssessmentDisplay from "@/components/AssessmentDisplay";
 import AssessButton from "@/components/AssessButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, LayoutDashboard, SearchCheck, Text, Trophy, User as UserIcon, Video, Target, Activity } from "lucide-react";
+import { ArrowRight, BookOpenCheck, LayoutDashboard, SearchCheck, Trophy, User as UserIcon, Video, Target, Activity } from "lucide-react";
 import IssueChart from "@/components/IssueChart";
 import Calendar from "@/components/Calender";
-import InputImg from "@/components/InputImg";
-import InputPdf from "@/components/InputPdf";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -38,8 +36,6 @@ const Dashboard = async () => {
       analytics: true,
     }, 
   });
-  
-  const EveryAutoAssessment = await prisma.automated_Assess.findMany({});
   
   const level = (num: string) => {
     if(num === '1') return 'Beginner'
@@ -153,17 +149,6 @@ const Dashboard = async () => {
           </div>
         </div>
 
-        {/* Context Extraction */}
-        <div className="bg-white dark:bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
-            <Text className="w-5 h-5 text-indigo-600"/> Extract Context for Assessment
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-6">
-            <InputImg/>
-            <InputPdf/>
-          </div>
-        </div>
-
         {/* --- SCROLL TARGET: Performance --- */}
         <div id="performance" className="bg-white dark:bg-card border border-border p-6 rounded-xl shadow-sm scroll-mt-8">
            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
@@ -175,61 +160,14 @@ const Dashboard = async () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-7 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center overflow-hidden">
               <div className="w-full max-w-full overflow-x-auto transform scale-90 sm:scale-100 origin-center flex justify-center">
-                <Calendar EveryResolve={EveryResult} EveryAssessment={EveryAssessment} EveryAutoAssessment={EveryAutoAssessment}/>
+                <Calendar EveryResolve={EveryResult} EveryAssessment={EveryAssessment} EveryAutoAssessment={[]}/>
               </div>
             </div>
             <div className="lg:col-span-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center overflow-hidden">
               <div className="w-full max-w-full overflow-x-auto transform scale-90 sm:scale-100 origin-center flex justify-center">
-                <IssueChart EveryResolve={EveryResult} EveryAssessment={EveryAssessment} EveryAutoAssessment={EveryAutoAssessment}/>
+                <IssueChart EveryResolve={EveryResult} EveryAssessment={EveryAssessment} EveryAutoAssessment={[]}/>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Hosted Assessments Table */}
-        <div className="bg-white dark:bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
-            <Trophy className="w-5 h-5 text-indigo-600"/> Hosted Assessments
-          </h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-                <TableRow>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300">Company</TableHead>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300">Job Profile</TableHead>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300">Job Type</TableHead>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300">Level</TableHead>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300">Posted At</TableHead>
-                  <TableHead className="font-semibold text-slate-600 dark:text-slate-300 text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {EveryAutoAssessment.map((autoAssess) => (
-                  <TableRow key={autoAssess.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="font-medium text-slate-900 dark:text-white">{autoAssess.companyName}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-300">{autoAssess.jobProfile}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-300">
-                      <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-xs">{autoAssess.jobtype}</span>
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-300">{level(autoAssess.level)}</TableCell>
-                    <TableCell className="text-slate-500 text-sm">{autoAssess.createdAt.toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Link className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium" href={{
-                        pathname: '/interviewHosted',
-                        query: { id: autoAssess.id },
-                      }}>
-                        Interview <ArrowRight className="w-4 h-4 ml-1"/>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {EveryAutoAssessment.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">No hosted assessments available.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </div>
         </div>
 

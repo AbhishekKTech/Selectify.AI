@@ -1,6 +1,6 @@
 "use client"
 import { createAssessSchema, CreateAssessSchema } from '@/lib/validation/dashboard'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Dialog, DialogTitle, DialogContent, DialogFooter, DialogHeader } from './ui/dialog'
@@ -9,13 +9,14 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from './ui/button'
-import { ArrowLeft, ArrowRight, Loader2, PlusCircle, Star, Trash, Lock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, PlusCircle, Star, Trash, Lock, FileUp } from 'lucide-react'
 import { Assess } from '@prisma/client'
 import LoadingButton from './ui/loading-btn'
 import { Droppable, Draggable, DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import styled from '@emotion/styled';
+import convertor from '@/lib/convertor'
 
 type Props = {
     open: boolean,
@@ -47,8 +48,12 @@ const NewAssessment = ({ open, setOpen, toEdit }: Props) => {
     const [deleteInProgress, setDeleteInProgress] = useState(false);
     const [formStep, setFormStep] = React.useState(0);
     const [curateWithAILoading, setCurateWithAILoading] = useState(false);
-    const router = useRouter();
+    
+    // Auto-fill Extractors State
+    const [isExtracting, setIsExtracting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const router = useRouter();
     const searchParams = useSearchParams();
     const id = searchParams.get('id');
     const jobProfile = searchParams.get('jobProfile');
@@ -56,7 +61,6 @@ const NewAssessment = ({ open, setOpen, toEdit }: Props) => {
     const companyName = searchParams.get('companyName');
     const jobRequirements = searchParams.get('jobRequirements');
 
-    // Permanent Intro Question Text
     const introQuestion = "Could you please briefly introduce yourself and share a bit about your background?";
 
     const form = useForm<CreateAssessSchema>({
@@ -68,10 +72,50 @@ const NewAssessment = ({ open, setOpen, toEdit }: Props) => {
             companyName: toEdit?.companyName || companyName || "",
             jobRequirements: toEdit?.jobRequirements || jobRequirements || "",
             level: toEdit?.level || "1", 
-            // FIX: Minimum 3 items array to satisfy Zod schema right from the start
             questions: toEdit?.questions?.length ? toEdit.questions : [introQuestion, "", ""],
         },
     });
+
+    // ─── Unified Context Extraction Logic ──────────────────────────────
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsExtracting(true);
+        try {
+            if (file.type === 'application/pdf') {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch('https://pdf-text-extractor-api.onrender.com/extractText', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) throw new Error('PDF extraction failed');
+                const data = await response.json();
+                
+                if (data.text) {
+                    const currentVal = form.getValues('jobRequirements');
+                    const separator = currentVal ? "\n\n" : "";
+                    form.setValue('jobRequirements', currentVal + separator + data.text);
+                }
+            } else if (file.type.startsWith('image/')) {
+                const url = URL.createObjectURL(file);
+                const text = await convertor(url);
+                if (text) {
+                    const currentVal = form.getValues('jobRequirements');
+                    const separator = currentVal ? "\n\n" : "";
+                    form.setValue('jobRequirements', currentVal + separator + text);
+                }
+            }
+        } catch (error) {
+            console.error("Extraction error:", error);
+            alert("Failed to extract text from file.");
+        } finally {
+            setIsExtracting(false);
+            if(fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+        }
+    };
+    // ───────────────────────────────────────────────────────────────────
 
     async function onSubmit(input: CreateAssessSchema) {
         try {
@@ -196,6 +240,16 @@ const NewAssessment = ({ open, setOpen, toEdit }: Props) => {
                         {toEdit ? "Edit Assessment" : "Self Assessment Setup"}
                     </DialogTitle>
                 </DialogHeader>
+                
+                {/* Hidden unified file input */}
+                <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                />
+
                 <Form {...form}>
                     <form 
                       className='space-y-4' 
@@ -243,15 +297,31 @@ const NewAssessment = ({ open, setOpen, toEdit }: Props) => {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
+                            {/* UPDATED: Profile Requirement field with Auto-fill functionality */}
                             <FormField control={form.control} name='jobRequirements' render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Profile Requirement</FormLabel>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <FormLabel className="mb-0">Profile Requirement</FormLabel>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={isExtracting}
+                                            className="h-7 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            {isExtracting ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <FileUp className="w-3 h-3 mr-1.5" />}
+                                            {isExtracting ? "Extracting Context..." : "Auto-fill via Image/PDF"}
+                                        </Button>
+                                    </div>
                                     <FormControl>
                                         <Textarea className='h-48 resize-none' placeholder="Strong MERN development experience for 5+ years..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                            
                             <FormField control={form.control} name='level' render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Difficulty Level Of Interview <span className='text-indigo-600 font-semibold'>({diflevel(field.value)})</span></FormLabel>
