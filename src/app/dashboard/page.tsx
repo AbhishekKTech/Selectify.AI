@@ -10,6 +10,7 @@ import { ArrowRight, BookOpenCheck, LayoutDashboard, SearchCheck, Trophy, User a
 import IssueChart from "@/components/IssueChart";
 import Calendar from "@/components/Calender";
 import { Button } from "@/components/ui/button";
+import JoinMeetingButton from "@/components/JoinMeetingButton";
 
 export const metadata: Metadata = {
   title: 'Dashboard | Selectify.AI'
@@ -97,7 +98,7 @@ const Dashboard = async () => {
             </div>
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Join Your Interview</h2>
             <p className="text-slate-500 text-sm flex-1">Seize your opportunity! Join your interview seamlessly by using the provided meeting ID as a candidate.</p>
-            <Button variant="outline" className="w-fit mt-2 border-slate-200">Enter Meeting ID</Button>
+            <JoinMeetingButton />
           </div>
           
           <div className="bg-white dark:bg-card border border-border p-6 rounded-xl shadow-sm flex flex-col gap-4 relative overflow-hidden">

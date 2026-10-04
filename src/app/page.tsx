@@ -43,9 +43,9 @@ export default async function Home() {
             <div className='max-w-7xl mx-auto px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-500 dark:text-slate-400'>
                 <h2 className='text-sm font-medium'>© 2026 Selectify.AI | Developed by Abhishek Sharma</h2>
                 <div className='flex flex-row gap-6 items-center'>
-                  <Link href={'https://github.com/abhiwork8595-coder'} target="_blank" className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Github size={20}/></Link>
-                  <Link href={'#'} className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Linkedin size={20}/></Link>
-                  <Link href={'mailto:abhishek@example.com'} className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Mail size={20}/></Link>
+                  <Link href={'https://github.com/AbhishekKTech'} target="_blank" className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Github size={20}/></Link>
+                  <Link href={'https://www.linkedin.com/in/abhishekktech/'} className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Linkedin size={20}/></Link>
+                  <Link href={'mailto:sharma.abhieee@gmail.com'} className='hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'><Mail size={20}/></Link>
                 </div>
             </div>
         </footer>

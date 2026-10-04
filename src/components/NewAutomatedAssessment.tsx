@@ -1,6 +1,6 @@
 "use client"
 import { createAssessSchema, CreateAssessSchema } from '@/lib/validation/dashboard'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Dialog, DialogTitle, DialogContent, DialogFooter, DialogHeader } from './ui/dialog'
@@ -9,13 +9,14 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { useRouter } from 'next/navigation'
 import { Button } from './ui/button'
-import { ArrowLeft, ArrowRight, Loader2, PlusCircle, Star, Trash } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, PlusCircle, Star, Trash, Upload } from 'lucide-react'
 import { Automated_Assess } from '@prisma/client'
 import LoadingButton from './ui/loading-btn'
 import { Droppable, Draggable, DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import styled from '@emotion/styled';
+import convertor from '@/lib/convertor'
 
 type Props = {
     open: boolean,
@@ -28,33 +29,104 @@ interface StyledDraggableProps {
     isDragging: boolean;
 }
 
+const StyledDraggable = styled.div<StyledDraggableProps>`
+    top: auto !important;
+    left: auto !important;
+    background-color: ${props => (props.isDragging ? '#e0e7ff' : 'transparent')};
+    border-radius: 0.5rem;
+    padding: ${props => (props.isDragging ? '0.5rem' : '0')};
+    transition: background-color 0.2s ease;
+`;
+
 const NewAutomatedAssessment = ({ open, setOpen, toEdit, userName }: Props) => {
     const [deleteInProgress, setDeleteInProgress] = useState(false);
     const [formStep, setFormStep] = React.useState(0);
     const [curateWithAILoading, setCurateWithAILoading] = useState(false);
-    const router = useRouter();
     
-    const StyledDraggable = styled.div<StyledDraggableProps>`
-      top: auto !important;
-      left: auto !important;
-      background-color: ${props => (props.isDragging ? '#e0e7ff' : 'transparent')};
-      border-radius: 0.5rem;
-      padding: ${props => (props.isDragging ? '0.5rem' : '0')};
-      transition: background-color 0.2s ease;
-    `;
+    // Auto-fill Extractors State
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const router = useRouter();
+
+    // FIXED: Added safe defaults for level, jobtype, and the static first question to prevent silent Zod validation blocks.
     const form = useForm<CreateAssessSchema>({
         resolver: zodResolver(createAssessSchema),
         defaultValues: {
             name: toEdit?.name || "",
             jobProfile: toEdit?.jobProfile || "",
-            jobtype: toEdit?.jobtype || "",
+            jobtype: toEdit?.jobtype || "Full-Time", 
             companyName: toEdit?.companyName || "",
             jobRequirements: toEdit?.jobRequirements || "",
-            level: toEdit?.level || "",
-            questions: toEdit?.questions || [],
+            level: toEdit?.level || "2", 
+            questions: toEdit?.questions?.length 
+                ? toEdit.questions 
+                : ["Please introduce yourself and talk about your previous experience."],
         },
     });   
+
+    // ─── Unified Context Extraction Logic ──────────────────────────────
+    const processExtraction = async (file: File) => {
+        setIsExtracting(true);
+        try {
+            if (file.type === 'application/pdf') {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch('https://pdf-text-extractor-api.onrender.com/extractText', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) throw new Error('PDF extraction failed');
+                const data = await response.json();
+                
+                if (data.text) {
+                    const currentVal = form.getValues('jobRequirements');
+                    const separator = currentVal ? "\n\n" : "";
+                    form.setValue('jobRequirements', currentVal + separator + data.text, { shouldValidate: true });
+                }
+            } else if (file.type.startsWith('image/')) {
+                const url = URL.createObjectURL(file);
+                const text = await convertor(url);
+                if (text) {
+                    const currentVal = form.getValues('jobRequirements');
+                    const separator = currentVal ? "\n\n" : "";
+                    form.setValue('jobRequirements', currentVal + separator + text, { shouldValidate: true });
+                }
+            } else {
+                alert("Please upload a valid Image or PDF file.");
+            }
+        } catch (error) {
+            console.error("Extraction error:", error);
+            alert("Failed to extract text from file.");
+        } finally {
+            setIsExtracting(false);
+            if(fileInputRef.current) fileInputRef.current.value = ''; 
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) processExtraction(file);
+    };
+
+    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) processExtraction(file);
+    };
+    // ───────────────────────────────────────────────────────────────────
 
     async function onSubmit(input: CreateAssessSchema) {
         try {
@@ -166,8 +238,23 @@ const NewAutomatedAssessment = ({ open, setOpen, toEdit, userName }: Props) => {
                         {toEdit ? "Edit Automated Assessment" : "Host Automated Assessment"}
                     </DialogTitle>
                 </DialogHeader>
+                
+                {/* Hidden unified file input */}
+                <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                />
+
                 <Form {...form}>
-                    <form className='space-y-4' onSubmit={form.handleSubmit(onSubmit)}>
+                    <form 
+                        className='space-y-4' 
+                        onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                            console.error("Validation Blocked Submission:", errors);
+                        })}
+                    >
                         <div className={cn('space-y-4', { hidden: formStep == 1 })}>
                             <FormField control={form.control} name='name' render={({ field }) => (
                                 <FormItem>
@@ -214,15 +301,50 @@ const NewAutomatedAssessment = ({ open, setOpen, toEdit, userName }: Props) => {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                            
+                            {/* Prominent Drag & Drop Zone for Auto-fill */}
                             <FormField control={form.control} name='jobRequirements' render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Profile Requirements</FormLabel>
+                                    <FormLabel className="text-base font-semibold">Profile Requirements (Job Description)</FormLabel>
+                                    
+                                    <div
+                                        onDragOver={onDragOver}
+                                        onDragLeave={onDragLeave}
+                                        onDrop={onDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={cn(
+                                            "mt-2 mb-4 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200",
+                                            isDragOver ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800",
+                                            isExtracting && "opacity-80 pointer-events-none"
+                                        )}
+                                    >
+                                        {isExtracting ? (
+                                            <div className="flex flex-col items-center gap-3 text-indigo-600 dark:text-indigo-400">
+                                                <Loader2 className="w-8 h-8 animate-spin" />
+                                                <span className="text-sm font-medium">Extracting text using AI...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
+                                                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mb-1">
+                                                    <Upload className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                                </div>
+                                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                    Click to upload or drag and drop
+                                                </p>
+                                                <p className="text-xs text-center">
+                                                    Upload a JD, Resume Image, or PDF to auto-fill requirements.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <FormControl>
-                                        <Textarea className='h-36 resize-none' placeholder="Key skills required (e.g. React, Next.js, TypeScript)..." {...field} />
+                                        <Textarea className='h-36 resize-none' placeholder="Or type manually: Key skills required (e.g. React, Next.js, TypeScript)..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
                             <FormField control={form.control} name='level' render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Difficulty Level Of Interview <span className='text-indigo-600 font-semibold'>({diflevel(field.value)})</span></FormLabel>

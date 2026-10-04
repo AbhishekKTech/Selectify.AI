@@ -3,12 +3,10 @@ import React from 'react';
 import prisma from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Briefcase, LayoutDashboard, PlusCircle, Text, Video, Users } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Briefcase, LayoutDashboard, PlusCircle, Video, Users } from "lucide-react";
 import AutomatedAssessmentButton from "@/components/AutomatedAssessButton";
 import AutomatedAssessmentDisplay from "@/components/AutomatedAssessmentDisplay";
-import InputImg from "@/components/InputImg";
-import InputPdf from "@/components/InputPdf";
-import { Button } from "@/components/ui/button";
+import GenerateMeetingButton from "@/components/GenerateMeetingButton";
 
 export const metadata = {
   title: 'Recruiter Dashboard | Selectify.AI'
@@ -84,20 +82,9 @@ const InterviewerDashboard = async () => {
             </div>
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Create/Join Live Interview</h2>
             <p className="text-slate-500 text-sm flex-1">Empower candidates by furnishing a meeting ID for a seamless 1-on-1 live interview experience.</p>
-            <Button variant="outline" className="w-fit mt-2 border-slate-200">Generate Meeting ID</Button>
+            <GenerateMeetingButton />
           </div>
 
-        </div>
-
-        {/* Context Extraction */}
-        <div className="bg-white dark:bg-card border border-border p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
-            <Text className="w-5 h-5 text-indigo-600"/> Context Extraction (Job Descriptions)
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-6">
-            <InputImg/>
-            <InputPdf/>
-          </div>
         </div>
 
         {/* --- SCROLL TARGET: Active Jobs (Manage) --- */}
