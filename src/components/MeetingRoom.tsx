@@ -64,7 +64,8 @@ export default function MeetingRoom({ roomId, userName, isRecruiter }: MeetingRo
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
           }}
           userInfo={{
-            displayName: userName
+            displayName: userName,
+            email: "guest@selectify.ai" // Added to satisfy TypeScript
           }}
           onApiReady={(externalApi) => {
             externalApi.addListener('readyToClose', () => {
