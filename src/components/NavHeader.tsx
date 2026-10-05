@@ -21,10 +21,9 @@ const NavHeader = ({userId}: Props) => {
       <nav className='flex max-w-7xl w-full flex-col sm:flex-row items-center justify-between p-4 px-8 mx-auto'>
         <Logo/>
         
-        <div className='flex items-center space-x-6'>
-          {userId && (
+        <div className='flex items-center space-x-4'>
+          {userId ? (
             <div className='flex flex-row gap-4 items-center justify-center border-r border-border pr-6'> 
-              
               {/* Premium Mode Switcher */}
               <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-inner">
                 <Link
@@ -57,7 +56,19 @@ const NavHeader = ({userId}: Props) => {
               <div className="ml-2 flex items-center">
                 <UserButton afterSignOutUrl='/' appearance={{elements:{avatarBox:{width:'2.5rem', height:"2.5rem"}}}}/>
               </div>
-
+            </div>
+          ) : (
+            <div className='flex items-center gap-3 pr-6 border-r border-border'>
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="font-semibold">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                  Get Started
+                </Button>
+              </Link>
             </div>
           )}
           <Themetoggle/>

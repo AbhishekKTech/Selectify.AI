@@ -17,3 +17,5 @@ export async function GET() {
   console.log(data);
   return NextResponse.json(data);
 }
+
+
